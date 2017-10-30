@@ -16,21 +16,28 @@ class CPR
 
 	private $pnrMode = false;
 	private $authToken;
-	private $demo = false;
+	private $demo    = false;
 
 	private $START_REC_LEN = 28; // start of DATA section of response
 
 
-	public function __construct($argv) {
+	/**
+	 * customerNumber must be exactly 4 numbers
+	 * username must be exactly 8 characters, will pad if not.
+	 * password must be exactly 8 characters, will pad if not.
+	 *
+	 * @param string $transCode
+	 * @param string $customerNumber
+	 * @param string $username
+	 * @param string $password
+	 */
+	public function __construct( $transCode = '', $customerNumber = '', $username = '', $password = '' ) {
 
-		if ( count( $argv ) === 6 ) {
-			$this->pnrMode = true;  // searching based on CPR number
-			$this->cprNr   = $argv[5];     // CPR number for the person we are searching for (if using Match with PNR=)
-		}
-		$this->transCode = $argv[1];
-		$this->kundeNr   = $argv[2];                 // must be exactly 4 numbers
-		$this->username  = str_pad( $argv[3], 8 );    // must be exactly 8 characters long
-		$this->password  = str_pad( $argv[4], 8 );    // must be exactly 8 characters long
+
+		$this->transCode = $transCode;
+		$this->kundeNr   = substr( $customerNumber, 0, 4 );
+		$this->username  = str_pad( $username, 8 );
+		$this->password  = str_pad( $password, 8 );
 
 
 		$context = stream_context_create();
@@ -47,12 +54,24 @@ class CPR
 
 			return EXIT_ERROR;
 		}
+	}
 
-		if ( $this->pnrMode === true ) {
-			$response = $this->doLookup( $fp, $argv[5] );
-		} else {
-			$response = $this->doLookup( $fp, $argv[5], $argv[6], $argv[7] );
-		}
+	public function findByCpr( $cpr ) {
+		$response = $this->doLookup( $fp, $argv[5] );
+	}
+
+	/**
+	 * Lookup person data using CPR number.
+	 *
+	 * @param string $name      Either the CPR number to lookup, or person's name
+	 * @param null   $birthdate Person's birthdate in DDMMYYYY format
+	 * @param null   $sex       Person's sex - either K or M
+	 *
+	 * @return string String containing person data on success, or NULL on error.
+	 */
+	public function searchByPerson( $name = '', $birthdate = null, $sex = null ) {
+
+		$response = $this->doLookup( $fp, $name, $birthdate, $sex );
 	}
 
 
@@ -63,7 +82,7 @@ class CPR
 	 *
 	 * @return resource Returns a pointer to a socket file descriptor that can be written to.
 	 */
-	function &get_socket( &$context ) {
+	private function &get_socket( &$context ) {
 		$fp = stream_socket_client( "tls://" . static::ENDPOINT_DEMO . ":5000", $errno, $errstr, 30, STREAM_CLIENT_CONNECT, $context );
 		stream_set_blocking( $fp, 1 );
 
@@ -81,7 +100,7 @@ class CPR
 	 *
 	 * @return bool Returns true if token retrieved, false on failure.
 	 */
-	function login( &$fp ) {
+	private function login( &$fp ) {
 		echo "Sending logon request:", PHP_EOL;
 
 		// LOGONINDIVID record must be 35 characters in length
@@ -117,7 +136,7 @@ class CPR
 	 *
 	 * @return string String containing person data on success, or NULL on error.
 	 */
-	function doLookup( &$fp, $cprNrOrName, $birthdate = null, $sex = null ) {
+	private function doLookup( &$fp, $cprNrOrName, $birthdate = null, $sex = null ) {
 		$sPaddedRequest = null;
 		if ( $this->pnrMode === true ) {
 			// build lookup request string - different if searching using CPR number as criteria
