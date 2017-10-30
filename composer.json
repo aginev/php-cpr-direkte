@@ -1,6 +1,6 @@
 {
-	"name": "lasserafn/php-initial-avatar-generator",
-	"description": "A package to generate avatars with initials for PHP",
+	"name": "lasserafn/php-cpr-direkte",
+	"description": "A package to use CPR DIREKTE in PHP",
 	"keywords": [
 		"initials",
 		"image",
