@@ -30,28 +30,10 @@ class CPR
 	 * @param string $password
 	 */
 	public function __construct( $transCode = '', $customerNumber = '', $username = '', $password = '' ) {
-
-
 		$this->transCode = $transCode;
 		$this->kundeNr   = substr( $customerNumber, 0, 4 );
 		$this->username  = str_pad( $username, 8 );
 		$this->password  = str_pad( $password, 8 );
-
-
-		$context      = stream_context_create();
-		$this->socket = $this->get_socket( $context );
-
-		if ( ! $this->socket ) {
-			// unable to get socket for reading/writing - abort program
-			return EXIT_ERROR;
-		}
-
-		$isLoggedIn = $this->login();
-		if ( $isLoggedIn === false ) {
-			echo "Error when logging in. Check credentials and try again.", PHP_EOL;
-
-			return EXIT_ERROR;
-		}
 	}
 
 	public function findByCpr( $cpr ) {
@@ -70,6 +52,22 @@ class CPR
 	public function searchByPerson( $name = '', $birthdate = null, $sex = null ) {
 
 		$response = $this->doLookup( $name, $birthdate, $sex );
+	}
+
+	private function prepare() {
+		$context      = stream_context_create();
+		$this->socket = $this->get_socket( $context );
+
+		if ( ! $this->socket ) {
+			// unable to get socket for reading/writing - abort program
+			return EXIT_ERROR;
+		}
+
+		if ( !$this->login() ) {
+			echo "Error when logging in. Check credentials and try again.", PHP_EOL;
+
+			return EXIT_ERROR;
+		}
 	}
 
 
@@ -132,6 +130,8 @@ class CPR
 	 * @return string String containing person data on success, or NULL on error.
 	 */
 	private function doLookup( $cprNrOrName, $birthdate = null, $sex = null ) {
+		$this->prepare();
+
 		$sPaddedRequest = null;
 		if ( $this->pnrMode === true ) {
 			// build lookup request string - different if searching using CPR number as criteria
