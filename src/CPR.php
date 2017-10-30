@@ -12,11 +12,9 @@ class CPR
 	private $kundeNr;
 	private $username;
 	private $password;
-	private $cprNr;
-
-	private $pnrMode = false;
+	private $socket;
 	private $authToken;
-	private $demo    = false;
+	private $demo = false;
 
 	private $START_REC_LEN = 28; // start of DATA section of response
 
@@ -40,15 +38,15 @@ class CPR
 		$this->password  = str_pad( $password, 8 );
 
 
-		$context = stream_context_create();
-		$fp      = $this->get_socket( $context );
+		$context      = stream_context_create();
+		$this->socket = $this->get_socket( $context );
 
-		if ( ! $fp ) {
+		if ( ! $this->socket ) {
 			// unable to get socket for reading/writing - abort program
 			return EXIT_ERROR;
 		}
 
-		$isLoggedIn = $this->login( $fp );
+		$isLoggedIn = $this->login();
 		if ( $isLoggedIn === false ) {
 			echo "Error when logging in. Check credentials and try again.", PHP_EOL;
 
@@ -57,7 +55,7 @@ class CPR
 	}
 
 	public function findByCpr( $cpr ) {
-		$response = $this->doLookup( $fp, $argv[5] );
+		$response = $this->doLookup( $cpr );
 	}
 
 	/**
@@ -71,7 +69,7 @@ class CPR
 	 */
 	public function searchByPerson( $name = '', $birthdate = null, $sex = null ) {
 
-		$response = $this->doLookup( $fp, $name, $birthdate, $sex );
+		$response = $this->doLookup( $name, $birthdate, $sex );
 	}
 
 
@@ -83,32 +81,30 @@ class CPR
 	 * @return resource Returns a pointer to a socket file descriptor that can be written to.
 	 */
 	private function &get_socket( &$context ) {
-		$fp = stream_socket_client( "tls://" . static::ENDPOINT_DEMO . ":5000", $errno, $errstr, 30, STREAM_CLIENT_CONNECT, $context );
-		stream_set_blocking( $fp, 1 );
+		$this->socket = stream_socket_client( $this->getEndpoint(), $errno, $errstr, 30, STREAM_CLIENT_CONNECT, $context );
+		stream_set_blocking( $this->socket, 1 );
 
-		if ( ! $fp ) {
+		if ( ! $this->socket ) {
 			echo "$errstr ($errno)", PHP_EOL;
 		}
 
-		return $fp;
+		return $this->socket;
 	}
 
 	/**
 	 * Login to CPR Direkte to obtain authentication token for data request
 	 *
-	 * @param $fp resource File pointer to read from and write to.
-	 *
 	 * @return bool Returns true if token retrieved, false on failure.
 	 */
-	private function login( &$fp ) {
+	private function login() {
 		echo "Sending logon request:", PHP_EOL;
 
 		// LOGONINDIVID record must be 35 characters in length
-		fwrite( $fp, str_pad( $this->transCode . "," . $this->kundeNr . "90" . $this->username . $this->password, 35 ) );
+		fwrite( $this->socket, str_pad( $this->transCode . "," . $this->kundeNr . "90" . $this->username . $this->password, 35 ) );
 		echo "Reading response:", PHP_EOL;
 
 		// read at most 24 bytes - the length of the SVARINDIVID record
-		$response = fread( $fp, 24 );
+		$response = fread( $this->socket, 24 );
 
 		echo $response, PHP_EOL;
 
@@ -129,14 +125,13 @@ class CPR
 	/**
 	 * Lookup person data using CPR number.
 	 *
-	 * @param      $fp          resource File pointer to read from and write to.
 	 * @param      $cprNrOrName string Either the CPR number to lookup, or person's name
 	 * @param null $birthdate   string Person's birthdate in DDMMYYYY format
 	 * @param null $sex         string Person's sex - either K or M
 	 *
 	 * @return string String containing person data on success, or NULL on error.
 	 */
-	private function doLookup( &$fp, $cprNrOrName, $birthdate = null, $sex = null ) {
+	private function doLookup( $cprNrOrName, $birthdate = null, $sex = null ) {
 		$sPaddedRequest = null;
 		if ( $this->pnrMode === true ) {
 			// build lookup request string - different if searching using CPR number as criteria
@@ -151,15 +146,15 @@ class CPR
 		}
 		echo "Sending data request:", PHP_EOL, $sPaddedRequest, PHP_EOL;
 
-		fwrite( $fp, $sPaddedRequest );
+		fwrite( $this->socket, $sPaddedRequest );
 
 		echo "Reading response:", PHP_EOL;
 		// read response from CPR until end of stream
 		$response = "";
-		while ( ! feof( $fp ) ) {
-			$response .= fread( $fp, 4096 );
+		while ( ! feof( $this->socket ) ) {
+			$response .= fread( $this->socket, 4096 );
 		}
-		fclose( $fp );
+		fclose( $this->socket );
 
 		echo $response, PHP_EOL;
 
@@ -324,10 +319,10 @@ class CPR
 
 	private function getEndpoint() {
 		if ( $this->isDemo() ) {
-			return static::ENDPOINT_DEMO;
+			return sprintf( 'tls://%s:5000', static::ENDPOINT_DEMO );
 		}
 
-		return static::ENDPOINT_LIVE;
+		return sprintf( 'tls://%s:5000', static::ENDPOINT_LIVE );
 	}
 
 	public function isDemo() {
