@@ -2,9 +2,10 @@
 	"name": "lasserafn/php-cpr-direkte",
 	"description": "A package to use CPR DIREKTE in PHP",
 	"keywords": [
-		"initials",
-		"image",
-		"avatar"
+		"danish",
+		"cpr",
+		"cpr direkte",
+		"php"
 	],
 	"type": "library",
 	"license": "MIT",
