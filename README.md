@@ -1,4 +1,6 @@
 # PHP CPR Direkte
+
+Based on samples from [CPR Dokumentation](https://cprdocs.atlassian.net/wiki/spaces/CPR/overview?mode=global)
  
 <p align="center"> 
 <a href="https://travis-ci.org/LasseRafn/php-cpr-direkte"><img src="https://img.shields.io/travis/LasseRafn/php-cpr-direkte.svg?style=flat-square" alt="Build Status"></a>
