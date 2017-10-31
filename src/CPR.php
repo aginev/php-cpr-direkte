@@ -4,324 +4,338 @@ namespace LasseRafn;
 
 class CPR
 {
-	const ENDPOINT_DEMO = 'direkte-demo.cpr.dk';
-	const ENDPOINT_LIVE = 'direkte.cpr.dk';
+    const ENDPOINT_DEMO = 'direkte-demo.cpr.dk';
+    const ENDPOINT_LIVE = 'direkte.cpr.dk';
 
-	const ERROR_CODES = [
-		'0'  => 'Ingen fejl',
-		'1'  => 'BRUGER-ID/KENDEORD ikke korrekt',
-		'2'  => 'KENDEORD udløbet, NYT KENDEORD krævet',
-		'3'  => 'NYT KENDEORD opfylder ikke formatet',
-		'4'  => 'Ikke adgang til CPR (CTSERVICE er midlertidigt lukket)',
-		'5'  => 'PNR ukendt i CPR',
-		'6'  => 'Ukendt KUNDENR',
-		'7'  => 'Timeout – ny LOGON nødvendig',
-		'8'  => 'Ikke adgang til CPR (CTSERVICE er ikke aktiv)',
-		'9'  => 'Alvorligt problem. Betydning: Der er ingen forbindelse mellem klienten og CPR-systemet; kontakt CSC Service Center på tlf. 36 14 61 92',
-		'10' => 'ABON_TYPE ukendt',
-		'11' => 'DATA_TYPE ukendt',
-		'14' => 'BRUGER-ID har ikke adgang til transaktionen (CTPROFIL er midlertidigt lukket)',
-		'16' => 'IP-adressen forkert',
-		'17' => 'PNR er ikke angivet',
-		'18' => 'BRUGER-ID har ikke adgang til transaktionen',
-		'24' => 'BRUGER-ID har ikke adgang til transaktionen',
-		'28' => 'BRUGER-ID har ikke adgang til transaktionen'
-	];
+    const ERROR_CODES = [
+        '0'  => 'Ingen fejl',
+        '1'  => 'BRUGER-ID/KENDEORD ikke korrekt',
+        '2'  => 'KENDEORD udløbet, NYT KENDEORD krævet',
+        '3'  => 'NYT KENDEORD opfylder ikke formatet',
+        '4'  => 'Ikke adgang til CPR (CTSERVICE er midlertidigt lukket)',
+        '5'  => 'PNR ukendt i CPR',
+        '6'  => 'Ukendt KUNDENR',
+        '7'  => 'Timeout – ny LOGON nødvendig',
+        '8'  => 'Ikke adgang til CPR (CTSERVICE er ikke aktiv)',
+        '9'  => 'Alvorligt problem. Betydning: Der er ingen forbindelse mellem klienten og CPR-systemet; kontakt CSC Service Center på tlf. 36 14 61 92',
+        '10' => 'ABON_TYPE ukendt',
+        '11' => 'DATA_TYPE ukendt',
+        '14' => 'BRUGER-ID har ikke adgang til transaktionen (CTPROFIL er midlertidigt lukket)',
+        '16' => 'IP-adressen forkert',
+        '17' => 'PNR er ikke angivet',
+        '18' => 'BRUGER-ID har ikke adgang til transaktionen',
+        '24' => 'BRUGER-ID har ikke adgang til transaktionen',
+        '28' => 'BRUGER-ID har ikke adgang til transaktionen',
+    ];
 
-	private $transCode;
-	private $kundeNr;
-	private $username;
-	private $password;
-	private $socket;
-	private $authToken;
-	private $demo = false;
+    private $transCode;
+    private $kundeNr;
+    private $username;
+    private $password;
+    private $socket;
+    private $authToken;
+    private $demo = false;
 
-	private $START_REC_LEN = 28; // start of DATA section of response
+    private $START_REC_LEN = 28; // start of DATA section of response
 
+    /**
+     * customerNumber must be exactly 4 numbers
+     * username must be exactly 8 characters, will pad if not.
+     * password must be exactly 8 characters, will pad if not.
+     *
+     * @param string $transCode
+     * @param string $customerNumber
+     * @param string $username
+     * @param string $password
+     */
+    public function __construct($transCode = '', $customerNumber = '', $username = '', $password = '')
+    {
+        $this->transCode = $transCode;
+        $this->kundeNr = substr($customerNumber, 0, 4);
+        $this->username = str_pad($username, 8);
+        $this->password = str_pad($password, 8);
+    }
 
-	/**
-	 * customerNumber must be exactly 4 numbers
-	 * username must be exactly 8 characters, will pad if not.
-	 * password must be exactly 8 characters, will pad if not.
-	 *
-	 * @param string $transCode
-	 * @param string $customerNumber
-	 * @param string $username
-	 * @param string $password
-	 */
-	public function __construct( $transCode = '', $customerNumber = '', $username = '', $password = '' ) {
-		$this->transCode = $transCode;
-		$this->kundeNr   = substr( $customerNumber, 0, 4 );
-		$this->username  = str_pad( $username, 8 );
-		$this->password  = str_pad( $password, 8 );
-	}
+    public function findByCpr($cpr)
+    {
+        return $this->getResponseData($this->doLookup((string) $cpr));
+    }
 
-	public function findByCpr( $cpr ) {
-		return $this->getResponseData( $this->doLookup( (string) $cpr ) );
-	}
+    private function prepare()
+    {
+        $context = stream_context_create();
+        $this->socket = $this->get_socket($context);
 
-	private function prepare() {
-		$context      = stream_context_create();
-		$this->socket = $this->get_socket( $context );
+        if (!$this->socket) {
+            throw new \Exception('No socket.');
+        }
 
-		if ( ! $this->socket ) {
-			throw new \Exception( 'No socket.' );
-		}
+        if (!$this->login()) {
+            throw new \Exception('Error when logging in. Check credentials and try again.');
+        }
 
-		if ( ! $this->login() ) {
-			throw new \Exception( 'Error when logging in. Check credentials and try again.' );
-		}
+        $this->socket = $this->get_socket($context);
+    }
 
-		$this->socket = $this->get_socket( $context );
-	}
+    /**
+     * Create socket from given context and configure it.
+     *
+     * @param $context resource context used to open connection to CPR.
+     *
+     * @return resource Returns a pointer to a socket file descriptor that can be written to.
+     */
+    private function &get_socket(&$context)
+    {
+        $this->socket = stream_socket_client($this->getEndpoint(), $errno, $errstr, 30, STREAM_CLIENT_CONNECT, $context);
+        stream_set_blocking($this->socket, 1);
 
+        if (!$this->socket) {
+            throw new \Exception("SOCKET ERROR: $errstr", $errno);
+        }
 
-	/**
-	 * Create socket from given context and configure it.
-	 *
-	 * @param $context resource context used to open connection to CPR.
-	 *
-	 * @return resource Returns a pointer to a socket file descriptor that can be written to.
-	 */
-	private function &get_socket( &$context ) {
-		$this->socket = stream_socket_client( $this->getEndpoint(), $errno, $errstr, 30, STREAM_CLIENT_CONNECT, $context );
-		stream_set_blocking( $this->socket, 1 );
+        return $this->socket;
+    }
 
-		if ( ! $this->socket ) {
-			throw new \Exception( "SOCKET ERROR: $errstr", $errno );
-		}
+    private function getResponseData($response)
+    {
+        if ($response === null || $response === '') {
+            throw new \Exception('No response.');
+        }
 
-		return $this->socket;
-	}
+        /* one or more data records are present, so we need to determine which based on
+           record numbers. Can also be hardcoded based on which records you have agreed
+           to receive from CPR system */
+        $records = $this->getAvailableRecords($response);
 
-	private function getResponseData( $response ) {
-		if ( $response === null || $response === '' ) {
-			throw new \Exception( 'No response.' );
-		}
+        if (array_key_exists('003', $records)) {
+            $REC_KONTAKT_START = $records['003'];
+            $this->printFullContactAddress($response, $REC_KONTAKT_START);
+        }
 
-		/* one or more data records are present, so we need to determine which based on
-		   record numbers. Can also be hardcoded based on which records you have agreed
-		   to receive from CPR system */
-		$records = $this->getAvailableRecords( $response );
+        if (array_key_exists('050', $records)) {
+            $this->printCreditWarning(substr($response, $records['050'], 43));
+        } else {
+            $START_CURR_DATA = $records['001'];
 
-		if ( array_key_exists( '003', $records ) ) {
-			$REC_KONTAKT_START = $records['003'];
-			$this->printFullContactAddress( $response, $REC_KONTAKT_START );
-		}
+            return new PersonResponse($START_CURR_DATA, $response);
+        }
+    }
 
-		if ( array_key_exists( '050', $records ) ) {
-			$this->printCreditWarning( substr( $response, $records['050'], 43 ) );
-		} else {
-			$START_CURR_DATA = $records['001'];
+    /**
+     * Login to CPR Direkte to obtain authentication token for data request.
+     *
+     * @return bool Returns true if token retrieved, false on failure.
+     */
+    private function login()
+    {
+        fwrite($this->socket, str_pad($this->transCode.','.$this->kundeNr.'90'.$this->username.$this->password, 35));
 
-			return new PersonResponse( $START_CURR_DATA, $response );
-		}
-	}
+        $response = fread($this->socket, 24);
 
-	/**
-	 * Login to CPR Direkte to obtain authentication token for data request
-	 *
-	 * @return bool Returns true if token retrieved, false on failure.
-	 */
-	private function login() {
-		fwrite( $this->socket, str_pad( $this->transCode . "," . $this->kundeNr . "90" . $this->username . $this->password, 35 ) );
+        $requestError = (int) substr($response, 22, 2); // get error code
+        if ($requestError !== 0) {
+            throw new \Exception("Login error: $requestError");
+        }
 
-		$response = fread( $this->socket, 24 );
+        $this->authToken = substr($response, 6, 8);
 
-		$requestError = (int) substr( $response, 22, 2 ); // get error code
-		if ( $requestError !== 0 ) {
-			throw new \Exception( "Login error: $requestError" );
-		}
+        return true;
+    }
 
-		$this->authToken = substr( $response, 6, 8 );
+    /**
+     * Lookup person data using CPR number.
+     *
+     * @param string $cpr CPR number to lookup
+     *
+     * @return string String containing person data on success, or NULL on error.
+     */
+    private function doLookup($cpr)
+    {
+        $this->prepare();
 
-		return true;
-	}
+        $requestData = str_pad($this->transCode.','.$this->kundeNr.'06'.$this->authToken.$this->username.'00'.$cpr, 39);
 
-	/**
-	 * Lookup person data using CPR number.
-	 *
-	 * @param string $cpr CPR number to lookup
-	 *
-	 * @return string String containing person data on success, or NULL on error.
-	 */
-	private function doLookup( $cpr ) {
-		$this->prepare();
+        fwrite($this->socket, $requestData);
 
-		$requestData = str_pad( $this->transCode . "," . $this->kundeNr . "06" . $this->authToken . $this->username . "00" . $cpr, 39 );
+        $response = '';
 
-		fwrite( $this->socket, $requestData );
+        while (!feof($this->socket)) {
+            $response .= fread($this->socket, 4096);
+        }
 
-		$response = '';
+        fclose($this->socket);
 
-		while ( ! feof( $this->socket ) ) {
-			$response .= fread( $this->socket, 4096 );
-		}
+        $this->parseErrorCode($response);
 
-		fclose( $this->socket );
+        return $response;
+    }
 
-		$this->parseErrorCode( $response );
+    /**
+     * Parses an error code and, if failure code present, prints error text from
+     * CPR Direkte.
+     *
+     * @param $response string The response to our previous request from CPR Direkte.
+     *
+     * @throws \Exception
+     *
+     * @return int Returns the error code if none (0)
+     */
+    private function parseErrorCode($response)
+    {
+        $code = (int) substr($response, 22, 2); // get error code from response
 
-		return $response;
-	}
+        if ($code !== 0) {
+            $errorText = substr($response, $this->START_REC_LEN, strlen($response) - $this->START_REC_LEN);
 
-	/**
-	 * Parses an error code and, if failure code present, prints error text from
-	 * CPR Direkte.
-	 *
-	 * @param $response string The response to our previous request from CPR Direkte.
-	 *
-	 * @throws \Exception
-	 * @return int Returns the error code if none (0)
-	 */
-	private function parseErrorCode( $response ) {
-		$code = (int) substr( $response, 22, 2 ); // get error code from response
+            throw new \Exception($errorText !== '' ? $errorText : (static::ERROR_CODES[$code] ?? ''), $code);
+        }
 
-		if ( $code !== 0 ) {
-			$errorText = substr( $response, $this->START_REC_LEN, strlen( $response ) - $this->START_REC_LEN );
+        return $code;
+    }
 
-			throw new \Exception( $errorText !== '' ? $errorText : ( static::ERROR_CODES[ $code ] ?? '' ), $code );
-		}
+    /**
+     * Method for getting the records sent from CPR system. Note that the records available
+     * to you are determined when you are setup as a customer with CPR.
+     *
+     * @param $response string The response to parse records from.
+     *
+     * @return array Returns a Map of records found, as well as the index in the response where the
+     *               record begins.
+     */
+    private function getAvailableRecords($response)
+    {
+        $records = [];
+        $start = $this->START_REC_LEN;
 
-		return $code;
-	}
+        /* if we find the start of a record, save it's starting position in the response string
+           as a key in associative array so we can parse it later */
+        while ($start < strlen($response)) {
+            $recordType = substr($response, $start, 3);
 
-	/**
-	 * Method for getting the records sent from CPR system. Note that the records available
-	 * to you are determined when you are setup as a customer with CPR.
-	 *
-	 * @param $response string The response to parse records from.
-	 *
-	 * @return array Returns a Map of records found, as well as the index in the response where the
-	 * record begins.
-	 */
-	private function getAvailableRecords( $response ) {
-		$records = [];
-		$start   = $this->START_REC_LEN;
+            if ($recordType === '000') { // START record
 
-		/* if we find the start of a record, save it's starting position in the response string
-		   as a key in associative array so we can parse it later */
-		while ( $start < strlen( $response ) ) {
-			$recordType = substr( $response, $start, 3 );
+                $records['000'] = $start; // mandatory in response
+                $start += 35; // end of record
+            } elseif ($recordType === '001') { // CURRENT_DATA record
 
-			if ( $recordType === "000" ) { // START record
+                $records['001'] = $start; // mandatory in response
+                $start += 469; // end of record
+            } elseif ($recordType === '002') { // FOREIGN_ADDRESS record
 
-				$records["000"] = $start; // mandatory in response
-				$start          += 35; // end of record
-			} else if ( $recordType === "001" ) { // CURRENT_DATA record
+                $records['002'] = $start; // NOTE: length is either 195/199 depending on record type 'A' or 'B'
+                $start += 195; // end of record
+            } elseif ($recordType === '003') { // KONTAKT_ADDRESS record
 
-				$records["001"] = $start; // mandatory in response
-				$start          += 469; // end of record
-			} else if ( $recordType === "002" ) { // FOREIGN_ADDRESS record
+                $records['003'] = $start;
+                $start += 195; // end of record
+            } elseif ($recordType === '004') { // MARRITAL_STATUS record
 
-				$records["002"] = $start; // NOTE: length is either 195/199 depending on record type 'A' or 'B'
-				$start          += 195; // end of record
-			} else if ( $recordType === "003" ) { // KONTAKT_ADDRESS record
+                $records['004'] = $start;
+                $start += 26; // end of record
+            } elseif ($recordType === '005') { // GUARDIAN record
 
-				$records["003"] = $start;
-				$start          += 195; // end of record
-			} else if ( $recordType === "004" ) { // MARRITAL_STATUS record
+                $records['005'] = $start;
+                $start += 217; // end of record
+            } elseif ($recordType === '011') { // CUSTOMERNUM_REF record
 
-				$records["004"] = $start;
-				$start          += 26; // end of record
-			} else if ( $recordType === "005" ) { // GUARDIAN record
+                $records['011'] = $start;
+                $start += 88; // end of record
+            } elseif ($recordType === '050') { // CREDIT_WARNING record
+                // NB: Credit warning data (050 record) is first available in production from 1/1/2017
 
-				$records["005"] = $start;
-				$start          += 217; // end of record
-			} else if ( $recordType === "011" ) { // CUSTOMERNUM_REF record
+                $records['050'] = $start;
+                $start += 29; // end of record
+            } elseif ($recordType === '999') { // END record
 
-				$records["011"] = $start;
-				$start          += 88; // end of record
-			} else if ( $recordType === "050" ) { // CREDIT_WARNING record
-				// NB: Credit warning data (050 record) is first available in production from 1/1/2017
+                $records['999'] = $start; // mandatory in response
+                $start += 21; // end of record
+            } else {
+                $start += strlen($recordType); // so we don't loop infinitely
+            }
+        }
 
-				$records["050"] = $start;
-				$start          += 29; // end of record
-			} else if ( $recordType === "999" ) { // END record
+        return $records;
+    }
 
-				$records["999"] = $start; // mandatory in response
-				$start          += 21; // end of record
-			} else {
-				$start += strlen( $recordType ); // so we don't loop infinitely
-			}
-		}
+    /**
+     * Return full address as given in the contact record.
+     *
+     * @param $response    string The response to pretty print contact address from.
+     * @param $recordStart integer The start of the contact record.
+     */
+    private function printFullContactAddress($response, $recordStart)
+    {
+        $FIELD_LENGTH = 34;
 
-		return $records;
-	}
+        // start position and length from PRIV specification
+        // due to php 0-indexing in strings, subtract 1 from 'Pos.' as shown in record specification
+        $contactFields = [
+            // KONTAKTADR1 field in position 14, length 34
+            trim(substr($response, $recordStart + 27, $FIELD_LENGTH)),
+            // KONTAKTADR2 field in position 48, length 34
+            trim(substr($response, $recordStart + 61, $FIELD_LENGTH)),
+            // KONTAKTADR3 field in position 82, length 34
+            trim(substr($response, $recordStart + 95, $FIELD_LENGTH)),
+            // KONTAKTADR4 field in position 116, length 34
+            trim(substr($response, $recordStart + 129, $FIELD_LENGTH)),
+            // KONTAKTADR5 field in position 150, length 34
+            trim(substr($response, $recordStart + 163, $FIELD_LENGTH)),
+        ];
 
-	/**
-	 * Return full address as given in the contact record.
-	 *
-	 * @param $response    string The response to pretty print contact address from.
-	 * @param $recordStart integer The start of the contact record.
-	 */
-	private function printFullContactAddress( $response, $recordStart ) {
-		$FIELD_LENGTH = 34;
+        // loop over available fields in contact record and print contents if not empty
+        foreach ($contactFields as $field) {
+            if (!$field === '') {
+                echo $field, PHP_EOL;
+            }
+        }
+    }
 
-		// start position and length from PRIV specification
-		// due to php 0-indexing in strings, subtract 1 from 'Pos.' as shown in record specification
-		$contactFields = [
-			// KONTAKTADR1 field in position 14, length 34
-			trim( substr( $response, $recordStart + 27, $FIELD_LENGTH ) ),
-			// KONTAKTADR2 field in position 48, length 34
-			trim( substr( $response, $recordStart + 61, $FIELD_LENGTH ) ),
-			// KONTAKTADR3 field in position 82, length 34
-			trim( substr( $response, $recordStart + 95, $FIELD_LENGTH ) ),
-			// KONTAKTADR4 field in position 116, length 34
-			trim( substr( $response, $recordStart + 129, $FIELD_LENGTH ) ),
-			// KONTAKTADR5 field in position 150, length 34
-			trim( substr( $response, $recordStart + 163, $FIELD_LENGTH ) )
-		];
+    /**
+     * Pretty print a credit warning record.
+     * NB: Credit warning data (050 record) is first available in production from 1/1/2017.
+     *
+     * @param $creditRecord string Subset of CPR Direkte response containing only credit warning record.
+     */
+    private function printCreditWarning($creditRecord)
+    {
+        $startDate = date_create_from_format('YmdHi', substr($creditRecord, 31, 12));
 
-		// loop over available fields in contact record and print contents if not empty
-		foreach ( $contactFields as $field ) {
-			if ( ! $field === '' ) {
-				echo $field, PHP_EOL;
-			}
-		}
-	}
+        // person can potentially have credit warning in the future
+        if ($startDate > new DateTime()) {
+            //echo "Person will have credit warning in future. In effect from: " . $startDate->format( 'd. M Y' ), PHP_EOL;
+        } else {
+            //echo "Person has credit warning record. In effect from: " . $startDate->format( 'd. M Y' ), PHP_EOL;
+        }
 
-	/**
-	 * Pretty print a credit warning record.
-	 * NB: Credit warning data (050 record) is first available in production from 1/1/2017
-	 *
-	 * @param $creditRecord string Subset of CPR Direkte response containing only credit warning record.
-	 */
-	private function printCreditWarning( $creditRecord ) {
-		$startDate = date_create_from_format( 'YmdHi', substr( $creditRecord, 31, 12 ) );
+        //echo "Warning type: ", substr( $creditRecord, 27, 4 ), PHP_EOL; // always 0005 -
+        //echo "Start date: ", $startDate->format( 'd. M Y' ), PHP_EOL;
+    }
 
-		// person can potentially have credit warning in the future
-		if ( $startDate > new DateTime() ) {
-			//echo "Person will have credit warning in future. In effect from: " . $startDate->format( 'd. M Y' ), PHP_EOL;
-		} else {
-			//echo "Person has credit warning record. In effect from: " . $startDate->format( 'd. M Y' ), PHP_EOL;
-		}
+    private function getEndpoint()
+    {
+        if ($this->isDemo()) {
+            return sprintf('tls://%s:5000', static::ENDPOINT_DEMO);
+        }
 
-		//echo "Warning type: ", substr( $creditRecord, 27, 4 ), PHP_EOL; // always 0005 -
-		//echo "Start date: ", $startDate->format( 'd. M Y' ), PHP_EOL;
-	}
+        return sprintf('tls://%s:5000', static::ENDPOINT_LIVE);
+    }
 
-	private function getEndpoint() {
-		if ( $this->isDemo() ) {
-			return sprintf( 'tls://%s:5000', static::ENDPOINT_DEMO );
-		}
+    public function isDemo()
+    {
+        return $this->demo;
+    }
 
-		return sprintf( 'tls://%s:5000', static::ENDPOINT_LIVE );
-	}
+    public function setDemo()
+    {
+        $this->demo = true;
 
-	public function isDemo() {
-		return $this->demo;
-	}
+        return $this;
+    }
 
-	public function setDemo() {
-		$this->demo = true;
+    public function setLive()
+    {
+        $this->demo = false;
 
-		return $this;
-	}
-
-	public function setLive() {
-		$this->demo = false;
-
-		return $this;
-	}
+        return $this;
+    }
 }
