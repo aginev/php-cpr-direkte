@@ -1,5 +1,9 @@
 # PHP CPR Direkte PNR Match
 
+As of right now, it only supports direct CPR/PNR matching. Matching by name, gender and birthdate is not supported right now.
+
+Only tested with PRIVATE access.
+
 Based on samples from [CPR Dokumentation](https://cprdocs.atlassian.net/wiki/spaces/CPR/overview?mode=global)
  
 <p align="center"> 
