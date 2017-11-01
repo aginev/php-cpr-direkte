@@ -110,6 +110,7 @@ class PersonResponse
 
     private function parseResponse($start, $response)
     {
+	    $response = utf8_encode($response);
         $this->type = trim(substr($response, $start + static::POS_TYPE, static::LENGTH_TYPE));
         $this->pnr = trim(substr($response, $start + static::POS_PNR, static::LENGTH_PNR));
         $this->birthdate = trim(substr($response, $start + static::POS_BIRTHDATE, static::LENGTH_BIRTHDATE));
