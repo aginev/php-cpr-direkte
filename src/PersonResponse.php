@@ -111,32 +111,33 @@ class PersonResponse
     private function parseResponse($start, $response)
     {
 	    $response = utf8_encode($response);
-        $this->type = trim(substr($response, $start + static::POS_TYPE, static::LENGTH_TYPE));
-        $this->pnr = trim(substr($response, $start + static::POS_PNR, static::LENGTH_PNR));
-        $this->birthdate = trim(substr($response, $start + static::POS_BIRTHDATE, static::LENGTH_BIRTHDATE));
-        $this->gender = trim(substr($response, $start + static::POS_GENDER, static::LENGTH_GENDER));
-        $this->status = trim(substr($response, $start + static::POS_STATUS, static::LENGTH_STATUS));
-        $this->status_date = trim(substr($response, $start + static::POS_STATUS_DATE, static::LENGTH_STATUS_DATE));
-        $this->pnrgaeld = trim(substr($response, $start + static::POS_PNRGAELD, static::LENGTH_PNRGAELD));
-        $this->disempowerment = trim(substr($response, $start + static::POS_DISEMPOWERMENT, static::LENGTH_DISEMPOWERMENT));
-        $this->addressdate = trim(substr($response, $start + static::POS_ADDRESSDATE, static::LENGTH_ADDRESSDATE));
-        $this->nameprotectiondate = trim(substr($response, $start + static::POS_NAMEPROTECTIONDATE, static::LENGTH_NAMEPROTECTIONDATE));
-        $this->position = trim(substr($response, $start + static::POS_POSITION, static::LENGTH_POSITION));
-        $this->addressname = trim(substr($response, $start + static::POS_ADDRESSNAME, static::LENGTH_ADDRESSNAME));
-        $this->coname = trim(substr($response, $start + static::POS_CONAME, static::LENGTH_CONAME));
-        $this->locality = trim(substr($response, $start + static::POS_LOCALITY, static::LENGTH_LOCALITY));
-        $this->street = trim(substr($response, $start + static::POS_STREET, static::LENGTH_STREET));
-        $this->city = trim(substr($response, $start + static::POS_CITY, static::LENGTH_CITY));
-        $this->zipcode = trim(substr($response, $start + static::POS_ZIPCODE, static::LENGTH_ZIPCODE));
-        $this->postdistrict = trim(substr($response, $start + static::POS_POSTDISTRICT, static::LENGTH_POSTDISTRICT));
-        $this->state = trim(substr($response, $start + static::POS_STATE, static::LENGTH_STATE));
-        $this->streetcode = trim(substr($response, $start + static::POS_STREETCODE, static::LENGTH_STREETCODE));
-        $this->street_number = trim(substr($response, $start + static::POS_STREET_NUMBER, static::LENGTH_STREET_NUMBER));
-        $this->floor = trim(substr($response, $start + static::POS_FLOOR, static::LENGTH_FLOOR));
-        $this->side_number = trim(substr($response, $start + static::POS_SIDE_NUMBER, static::LENGTH_SIDE_NUMBER));
-        $this->bnr = trim(substr($response, $start + static::POS_BNR, static::LENGTH_BNR));
-        $this->firstname = trim(substr($response, $start + static::POS_FIRSTNAME, static::LENGTH_FIRSTNAME));
-        $this->lastname = trim(substr($response, $start + static::POS_LASTNAME, static::LENGTH_LASTNAME));
-        $this->streetaddress_name = trim(substr($response, $start + static::POS_STREETADDRESS_NAME, static::LENGTH_STREETADDRESS_NAME));
+
+        $this->type = trim(mb_substr($response, $start + static::POS_TYPE, static::LENGTH_TYPE));
+        $this->pnr = trim(mb_substr($response, $start + static::POS_PNR, static::LENGTH_PNR));
+        $this->birthdate = trim(mb_substr($response, $start + static::POS_BIRTHDATE, static::LENGTH_BIRTHDATE));
+        $this->gender = trim(mb_substr($response, $start + static::POS_GENDER, static::LENGTH_GENDER));
+        $this->status = trim(mb_substr($response, $start + static::POS_STATUS, static::LENGTH_STATUS));
+        $this->status_date = trim(mb_substr($response, $start + static::POS_STATUS_DATE, static::LENGTH_STATUS_DATE));
+        $this->pnrgaeld = trim(mb_substr($response, $start + static::POS_PNRGAELD, static::LENGTH_PNRGAELD));
+        $this->disempowerment = trim(mb_substr($response, $start + static::POS_DISEMPOWERMENT, static::LENGTH_DISEMPOWERMENT));
+        $this->addressdate = trim(mb_substr($response, $start + static::POS_ADDRESSDATE, static::LENGTH_ADDRESSDATE));
+        $this->nameprotectiondate = trim(mb_substr($response, $start + static::POS_NAMEPROTECTIONDATE, static::LENGTH_NAMEPROTECTIONDATE));
+        $this->position = trim(mb_substr($response, $start + static::POS_POSITION, static::LENGTH_POSITION));
+        $this->addressname = trim(mb_substr($response, $start + static::POS_ADDRESSNAME, static::LENGTH_ADDRESSNAME));
+        $this->coname = trim(mb_substr($response, $start + static::POS_CONAME, static::LENGTH_CONAME));
+        $this->locality = trim(mb_substr($response, $start + static::POS_LOCALITY, static::LENGTH_LOCALITY));
+        $this->street = trim(mb_substr($response, $start + static::POS_STREET, static::LENGTH_STREET));
+        $this->city = trim(mb_substr($response, $start + static::POS_CITY, static::LENGTH_CITY));
+        $this->zipcode = trim(mb_substr($response, $start + static::POS_ZIPCODE, static::LENGTH_ZIPCODE));
+        $this->postdistrict = trim(mb_substr($response, $start + static::POS_POSTDISTRICT, static::LENGTH_POSTDISTRICT));
+        $this->state = trim(mb_substr($response, $start + static::POS_STATE, static::LENGTH_STATE));
+        $this->streetcode = trim(mb_substr($response, $start + static::POS_STREETCODE, static::LENGTH_STREETCODE));
+        $this->street_number = trim(mb_substr($response, $start + static::POS_STREET_NUMBER, static::LENGTH_STREET_NUMBER));
+        $this->floor = trim(mb_substr($response, $start + static::POS_FLOOR, static::LENGTH_FLOOR));
+        $this->side_number = trim(mb_substr($response, $start + static::POS_SIDE_NUMBER, static::LENGTH_SIDE_NUMBER));
+        $this->bnr = trim(mb_substr($response, $start + static::POS_BNR, static::LENGTH_BNR));
+        $this->firstname = trim(mb_substr($response, $start + static::POS_FIRSTNAME, static::LENGTH_FIRSTNAME));
+        $this->lastname = trim(mb_substr($response, $start + static::POS_LASTNAME, static::LENGTH_LASTNAME));
+        $this->streetaddress_name = trim(mb_substr($response, $start + static::POS_STREETADDRESS_NAME, static::LENGTH_STREETADDRESS_NAME));
     }
 }
