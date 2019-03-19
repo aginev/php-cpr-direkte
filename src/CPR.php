@@ -8,8 +8,8 @@ class CPR
     const ENDPOINT_LIVE = 'direkte.cpr.dk';
 
     const ERROR_CODES = [
-        '0'  => 'No errors',
-        '1'  => 'User ID or socket are invalid',
+        '0'  => 'No errors.',
+        '1'  => 'User ID or socket are invalid.',
         '2'  => 'Socket is expired (new socket required).',
         '3'  => 'Invalid socket format.',
         '4'  => 'No access to CPR (CTSERVICE is temporarily closed).',
