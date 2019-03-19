@@ -31,7 +31,7 @@ class CPR
     ];
 
     private $transCode;
-    private $kundeNr;
+    private $customerNumber;
     private $username;
     private $password;
     private $socket;
@@ -53,7 +53,7 @@ class CPR
     public function __construct($transCode = '', $customerNumber = '', $username = '', $password = '')
     {
         $this->transCode = $transCode;
-        $this->kundeNr = substr($customerNumber, 0, 4);
+        $this->customerNumber = substr($customerNumber, 0, 4);
         $this->username = str_pad($username, 8);
         $this->password = str_pad($password, 8);
     }
@@ -130,7 +130,7 @@ class CPR
      */
     private function login()
     {
-        fwrite($this->socket, str_pad($this->transCode.','.$this->kundeNr.'90'.$this->username.$this->password, 35));
+        fwrite($this->socket, str_pad($this->transCode.','.$this->customerNumber.'90'.$this->username.$this->password, 35));
 
         $response = fread($this->socket, 24);
 
@@ -155,7 +155,7 @@ class CPR
     {
         $this->prepare();
 
-        $requestData = str_pad($this->transCode.','.$this->kundeNr.'06'.$this->authToken.$this->username.'00'.$cpr, 39);
+        $requestData = str_pad($this->transCode.','.$this->customerNumber.'06'.$this->authToken.$this->username.'00'.$cpr, 39);
 
         fwrite($this->socket, $requestData);
 
