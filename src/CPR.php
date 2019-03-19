@@ -7,25 +7,27 @@ class CPR
     const ENDPOINT_DEMO = 'direkte-demo.cpr.dk';
     const ENDPOINT_LIVE = 'direkte.cpr.dk';
 
+    /**
+     * Error numbers and descriptions
+     *
+     * Errors from 12 to 15 and 18 to 98 are listed as reserved at the service documentation
+     */
     const ERROR_CODES = [
         '0'  => 'No errors.',
-        '1'  => 'User ID or socket are invalid.',
-        '2'  => 'Socket is expired (new socket required).',
-        '3'  => 'Invalid socket format.',
+        '1'  => 'User ID or password are incorrect.',
+        '2'  => 'Password expired (new password required).',
+        '3'  => 'Password format error.',
         '4'  => 'No access to CPR (CTSERVICE is temporarily closed).',
-        '5'  => 'PNR unknown in CPR.',
+        '5'  => 'PNR not found in CPR.',
         '6'  => 'Unknown customer.',
         '7'  => 'Timeout (new login required).',
-        '8'  => 'No access to CPR (CTSERVICE is not active).',
+        '8'  => 'DEAD-LOCK while retrieving data from the CPR system.',
         '9'  => 'Serious problem. There is no connection between the client and the CPR system. Contact CSC Service Center on +45 36 14 61 92.',
         '10' => 'Subscription indicator (ABON_TYPE) unknown.',
         '11' => 'Output format (DATA_TYPE) unknown.',
-        '14' => 'User ID cannot access the transaction (CTPROFILE is temporarily closed).',
-        '16' => 'IP address incorrect.',
+        '16' => 'No access for your IP address.',
         '17' => 'PNR is not specified.',
-        '18' => 'User ID does not have access to the transaction.',
-        '24' => 'User ID does not have access to the transaction.',
-        '28' => 'User ID does not have access to the transaction.',
+        '99' => 'User ID has not access to the transaction.'
     ];
 
     private $transCode;
