@@ -30,29 +30,59 @@ class CPR
         '99' => 'User ID has not access to the transaction.'
     ];
 
-    private $transCode;
+    /**
+     * 4 letter CPR’s transaction code
+     */
+    private $transactionCode;
+    
+    /**
+     * Customer Registration no. issued by the CPR Office
+     */
     private $customerNumber;
+    
+    /**
+     * Username issued by the CPR Office
+     */
     private $username;
+    
+    /**
+     * Current user password
+     */
     private $password;
+    
+    /**
+     * The socket connection
+     */
     private $socket;
+    
+    /**
+     * Authentication token after login
+     */
     private $authToken;
+    
+    /**
+     * Demo/Live flag
+     */
     private $demo = false;
 
-    private $START_REC_LEN = 28; // start of DATA section of response
+    /**
+     * start of DATA section of response
+     */
+    private $START_REC_LEN = 28;
 
     /**
      * customerNumber must be exactly 4 numbers
      * username must be exactly 8 characters, will pad if not.
      * password must be exactly 8 characters, will pad if not.
      *
-     * @param string $transCode
+     * @param string $transactionCode
      * @param string $customerNumber
      * @param string $username
      * @param string $password
      */
-    public function __construct($transCode = '', $customerNumber = '', $username = '', $password = '')
+    public function __construct($transactionCode = '', $customerNumber = '', $username = '', $password = '')
     {
-        $this->transCode = $transCode;
+        $this->transactionCode = $transactionCode;
         $this->customerNumber = substr($customerNumber, 0, 4);
         $this->username = str_pad($username, 8);
         $this->password = str_pad($password, 8);
@@ -130,7 +160,7 @@ class CPR
      */
     private function login()
     {
-        fwrite($this->socket, str_pad($this->transCode.','.$this->customerNumber.'90'.$this->username.$this->password, 35));
+        fwrite($this->socket, str_pad($this->transactionCode.','.$this->customerNumber.'90'.$this->username.$this->password, 35));
 
         $response = fread($this->socket, 24);
 
@@ -155,7 +185,7 @@ class CPR
     {
         $this->prepare();
 
-        $requestData = str_pad($this->transCode.','.$this->customerNumber.'06'.$this->authToken.$this->username.'00'.$cpr, 39);
+        $requestData = str_pad($this->transactionCode.','.$this->customerNumber.'06'.$this->authToken.$this->username.'00'.$cpr, 39);
 
         fwrite($this->socket, $requestData);
 
